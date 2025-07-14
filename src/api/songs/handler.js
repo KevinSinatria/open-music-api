@@ -1,3 +1,5 @@
+const { P } = require("node-pg-migrate/migration-BoFzIj0Z");
+
 class SongHandler {
   constructor(service, validator) {
     this._service = service;
@@ -11,9 +13,9 @@ class SongHandler {
   }
 
   async postSongHandler(request, h) {
-    this._validator.validateSongPayload(request.h);
-    const { title, year, performer, genre, duration, albumId } =
-      request.payload;
+    const songPayload = request.payload;
+    this._validator.validateSongPayload(songPayload);
+    const { title, year, performer, genre, duration, albumId } = songPayload;
 
     const songId = await this._service.addSong({
       title,
@@ -30,5 +32,62 @@ class SongHandler {
         songId,
       },
     });
+
+    response.code(201);
+
+    return response;
+  }
+
+  async getSongsHandler(request) {
+    const reqQuery = request.query;
+    const { title = "", performer = "" } = reqQuery;
+    await this._validator.validateSongQueryParams({ title, performer });
+
+    const songs = this._service.getAllSongs(reqQuery);
+
+    return {
+      status: "success",
+      data: {
+        songs,
+      },
+    };
+  }
+
+  async getSongByIdHandler(request) {
+    const { id } = request.params;
+    const song = this._service.getSongById(id);
+
+    return {
+      status: "success",
+      data: {
+        song,
+      },
+    };
+  }
+
+  async putSongByIdHandler(request) {
+    const songPayload = request.payload;
+    const { id } = request.params;
+    this._validator.validateSongPayload(songPayload);
+
+    await this._service.editSongById(id, songPayload);
+
+    return {
+      status: "success",
+      message: `Berhasil memperbarui data song dengan id ${id}`,
+    };
+  }
+
+  async deleteSongByIdHandler(request) {
+    const { id } = request.params;
+
+    await this._service.deleteSongById(id);
+
+    return {
+      status: "success",
+      message: `Berhasil menghapus song dengan id ${id}`,
+    };
   }
 }
+
+module.exports = SongHandler;
