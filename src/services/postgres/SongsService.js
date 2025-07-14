@@ -23,12 +23,13 @@ class SongsService {
     };
 
     const result = await this._pool.query(query);
+    const resultId = result.rows[0].id;
 
-    if (!result.rows[0].id) {
+    if (!resultId) {
       throw new InvariantError("Song gagal ditambahkan.");
     }
 
-    return result.rows[0].id;
+    return resultId;
   }
 
   async getAllSongs({ title = null, performer = null }) {
@@ -58,12 +59,9 @@ class SongsService {
       values: queryValues,
     };
 
-    const result = await this._pool.query(query);
+    const { rows } = await this._pool.query(query);
 
-    if (title !== null && title !== "") {
-    }
-
-    return result.rows;
+    return rows;
   }
 
   async getSongById(id) {
