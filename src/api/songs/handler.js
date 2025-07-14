@@ -1,5 +1,3 @@
-const { P } = require("node-pg-migrate/migration-BoFzIj0Z");
-
 class SongHandler {
   constructor(service, validator) {
     this._service = service;
@@ -43,7 +41,7 @@ class SongHandler {
     const { title = "", performer = "" } = reqQuery;
     await this._validator.validateSongQueryParams({ title, performer });
 
-    const songs = this._service.getAllSongs(reqQuery);
+    const songs = await this._service.getAllSongs(reqQuery);
 
     return {
       status: "success",
@@ -55,7 +53,7 @@ class SongHandler {
 
   async getSongByIdHandler(request) {
     const { id } = request.params;
-    const song = this._service.getSongById(id);
+    const song = await this._service.getSongById(id);
 
     return {
       status: "success",
@@ -68,7 +66,7 @@ class SongHandler {
   async putSongByIdHandler(request) {
     const songPayload = request.payload;
     const { id } = request.params;
-    this._validator.validateSongPayload(songPayload);
+    await this._validator.validateSongPayload(songPayload);
 
     await this._service.editSongById(id, songPayload);
 

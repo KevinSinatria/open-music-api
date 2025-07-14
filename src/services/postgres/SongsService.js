@@ -19,38 +19,38 @@ class SongsService {
     const id = `song-${nanoid(16)}`;
     const query = {
       text: "INSERT INTO songs VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
-      values: [id, title, year, genre, performer, duration, albumId],
+      values: [id, title, year, performer, genre, duration, albumId],
     };
 
     const result = await this._pool.query(query);
 
     if (!result.rows[0].id) {
-      throw InvariantError("Song gagal ditambahkan.");
+      throw new InvariantError("Song gagal ditambahkan.");
     }
 
     return result.rows[0].id;
   }
 
-  async getAllSongs({ titleQuery = null, performerQuery = null }) {
-    let queryText = "SELECT * FROM songs";
+  async getAllSongs({ title = null, performer = null }) {
+    let queryText = "SELECT id, title, performer FROM songs";
     let queryValues = [];
     let conditions = [];
     let paramIndex = 1;
 
-    if (titleQuery) {
+    if (title !== null && title !== "") {
       conditions.push(`title ILIKE $${paramIndex}`);
-      queryValues.push(`%${titleQuery}%`);
+      queryValues.push(`%${title}%`);
       paramIndex++;
     }
 
-    if (performerQuery) {
+    if (performer !== null && performer !== "") {
       conditions.push(`performer ILIKE $${paramIndex}`);
-      queryValues.push(`%${performerQuery}%`);
+      queryValues.push(`%${performer}%`);
       paramIndex++;
     }
 
     if (conditions.length > 0) {
-      queryText += `WHERE ${conditions.join(" AND ")}`;
+      queryText += ` WHERE ${conditions.join(" AND ")}`;
     }
 
     const query = {
@@ -58,9 +58,12 @@ class SongsService {
       values: queryValues,
     };
 
-    const result = this._pool.query(query);
+    const result = await this._pool.query(query);
 
-    return result;
+    if (title !== null && title !== "") {
+    }
+
+    return result.rows;
   }
 
   async getSongById(id) {
@@ -69,22 +72,22 @@ class SongsService {
       values: [id],
     };
 
-    const result = this._pool.query(query);
+    const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      return NotFoundError(`Song dengan id ${id} tidak ditemukan.`);
+      throw new NotFoundError(`Song dengan id ${id} tidak ditemukan.`);
     }
 
-    return result;
+    return result.rows[0];
   }
 
   async editSongById(id, { title, year, performer, genre, duration, albumId }) {
     const query = {
-      text: "UPDATE songs SET title = $1, year = $2, performer = $3, genre = $4, duration = $5, album_id = $6, WHERE id = $7 RETURNING id",
+      text: "UPDATE songs SET title = $1, year = $2, performer = $3, genre = $4, duration = $5, album_id = $6 WHERE id = $7 RETURNING id",
       values: [title, year, performer, genre, duration, albumId, id],
     };
 
-    const result = this._pool.query(query);
+    const result = await this._pool.query(query);
 
     if (!result.rows.length) {
       throw new NotFoundError(
@@ -99,7 +102,7 @@ class SongsService {
       values: [id],
     };
 
-    const result = this._pool.query(query);
+    const result = await this._pool.query(query);
 
     if (!result.rows.length) {
       throw new NotFoundError(
