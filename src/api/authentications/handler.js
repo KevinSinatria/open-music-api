@@ -1,11 +1,14 @@
 class AuthenticationsHandler {
-	constructor(authenticationService, usersService, tokenManager, validator) {
-		this._authenticationService = authenticationService;
+	constructor(authenticationsService, usersService, tokenManager, validator) {
+		this._authenticationsService = authenticationsService;
 		this._usersService = usersService;
 		this._tokenManager = tokenManager;
 		this._validator = validator;
 
 		this.postAuthenticationHandler = this.postAuthenticationHandler.bind(this);
+		this.putAuthenticationHandler = this.putAuthenticationHandler.bind(this);
+		this.deleteAuthenticationHandler =
+			this.deleteAuthenticationHandler.bind(this);
 	}
 
 	async postAuthenticationHandler(request, h) {
@@ -19,7 +22,7 @@ class AuthenticationsHandler {
 		const accessToken = this._tokenManager.generateAccessToken({ id });
 		const refreshToken = this._tokenManager.generateRefreshToken({ id });
 
-		await this._authenticationService.addRefreshToken(refreshToken);
+		await this._authenticationsService.addRefreshToken(refreshToken);
 		const response = h.response({
 			status: "success",
 			data: {
