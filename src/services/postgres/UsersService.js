@@ -3,6 +3,7 @@ const InvariantError = require("../../exceptions/InvariantError");
 const { nanoid } = require("nanoid");
 const bcrypt = require("bcrypt");
 const NotFoundError = require("../../exceptions/NotFoundError");
+const ForbiddenError = require("../../exceptions/ForbiddenError");
 
 class UsersService {
 	constructor() {
@@ -68,14 +69,14 @@ class UsersService {
 		const result = await this._pool.query(query);
 
 		if (!result.rows.length) {
-			throw new AuthenticationError("Kredensial yang Anda berikan salah");
+			throw new ForbiddenError("Kredensial yang Anda berikan salah");
 		}
 
 		const { id, password: hashedPassword } = result.rows[0];
 		const match = await bcrypt.compare(password, hashedPassword);
 
 		if (!match) {
-			throw new AuthenticationError("Kredensial yang Anda berikan salah");
+			throw new ForbiddenError("Kredensial yang Anda berikan salah");
 		}
 
 		return id;
