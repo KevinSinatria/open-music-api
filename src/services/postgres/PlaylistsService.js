@@ -2,6 +2,7 @@ const { nanoid } = require("nanoid");
 const { Pool } = require("pg");
 const InvariantError = require("../../exceptions/InvariantError");
 const NotFoundError = require("../../exceptions/NotFoundError");
+const ForbiddenError = require("../../exceptions/ForbiddenError");
 
 class PlaylistsService {
 	constructor() {
@@ -53,26 +54,27 @@ class PlaylistsService {
 
 	async addSongToPlaylist(playlistId, songId) {
 		const id = `playlist_song-${nanoid(16)}`;
+		await this.verifyPlaylistAndSongIsExist(playlistId, songId);
 		const query = {
 			text: "INSERT INTO playlist_songs VALUES($1, $2, $3) RETURNING id",
 			values: [id, playlistId, songId],
 		};
 
-		const {
-			rows: { id: playlistSongId },
-		} = await this._pool.query(query);
+		const playlistSongResult = await this._pool.query(query);
 
-		if (!playlistSongId) {
+		if (!playlistSongResult.rows.length) {
 			throw new InvariantError("Lagu gagal ditambahkan ke playlist");
 		}
+
+		const playlistSongId = playlistSongResult.rows[0].id;
 
 		return playlistSongId;
 	}
 
-	async getSongsByPlaylistId(playlistId, ownerId) {
+	async getSongsByPlaylistId(playlistId) {
 		const playlistQuery = {
-			text: "SELECT playlists.id, playlists.name, users.username FROM playlists LEFT JOIN users ON users.id = playlists.owner WHERE playlists.owner = $1 AND playlists.id = $2",
-			values: [ownerId, playlistId],
+			text: "SELECT playlists.id, playlists.name, users.username FROM playlists LEFT JOIN users ON users.id = playlists.owner WHERE playlists.id = $1",
+			values: [playlistId],
 		};
 
 		const songsQuery = {
@@ -100,6 +102,7 @@ class PlaylistsService {
 	}
 
 	async deleteSongFromPlaylist(playlistId, songId) {
+		await this.verifyPlaylistAndSongIsExist(playlistId, songId);
 		const query = {
 			text: "DELETE FROM playlist_songs WHERE playlist_id = $1 AND song_id = $2 RETURNING id",
 			values: [playlistId, songId],
@@ -111,6 +114,58 @@ class PlaylistsService {
 			throw new NotFoundError(
 				`Gagal menghapus lagu. Lagu dengan id ${songId} tidak ditemukan`
 			);
+		}
+	}
+
+	async verifyPlaylistOwner(id, ownerId) {
+		const query = {
+			text: "SELECT * FROM playlists WHERE id = $1",
+			values: [id],
+		};
+
+		const result = await this._pool.query(query);
+		if (!result.rows.length) {
+			throw new NotFoundError("Playlist tidak ditemukan");
+		}
+		const playlist = result.rows[0];
+
+		if (playlist.owner !== ownerId) {
+			throw new ForbiddenError("Anda tidak berhak mengakses resource ini");
+		}
+	}
+
+	// async verifyPlaylistAccess(id, userId) {
+	// 	try {
+	// 		await this.verifyPlaylistOwner(id, userId);
+	// 	} catch (error) {
+	// 		if (error instanceof NotFoundError) {
+	// 			throw error;
+	// 		} else {
+	// 			throw new ForbiddenError("Anda tidak berhak mengakses resource ini");
+	// 		}
+	// 	}
+	// }
+
+	async verifyPlaylistAndSongIsExist(playlistId, songId) {
+		const songIdQuery = {
+			text: "SELECT id FROM songs WHERE id = $1",
+			values: [songId],
+		};
+
+		const playlistIdQuery = {
+			text: "SELECT id FROM playlists WHERE id = $1",
+			values: [playlistId],
+		};
+
+		const songResult = await this._pool.query(songIdQuery);
+		const playlistResult = await this._pool.query(playlistIdQuery);
+
+		if (!songResult.rows.length) {
+			throw new NotFoundError("Lagu tidak ditemukan");
+		}
+
+		if (!playlistResult.rows.length) {
+			throw new NotFoundError("Playlist tidak ditemukan");
 		}
 	}
 }
